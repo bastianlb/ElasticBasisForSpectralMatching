@@ -80,6 +80,22 @@ if __name__ == "__main__":
 
     np.savetxt(writePath + shapeA.name + '_' + shapeB.name + '_LBBasisresult.txt', corr_LB, fmt='%d')
     print('saved computed correspondence in result folder')
+
+    # compute correspondences using the elastic eigenmodes (elasticBasis) orthogonal
+    Solv_elastic_ortho = CorrespondenceSolver(shapeA, shapeB, kmin=kmin, kmax=kmax, bending_weight=bending_weight,
+                                              elasticBasis=True, orthonormalBasis=True)
+    # trick the solver into now using the regular solve
+    Solv_elastic_ortho.elasticBasis = False
+    Solv_elastic_ortho.LBBasis = True
+    # create an initial functional map (kmin x kmin) by aligning the basis functions on landmarks
+    C_init_ortho = Solv_elastic_ortho.CinitfromLandmarks(landmarksA, landmarksB)
+    # compute final correspondences by an iterative procedure
+    P_ortho, C_ortho = Solv_elastic.computeCorrespondence(C=C_init_ortho)
+
+    # convert mapping matrix to indices vA->vB[corr_ours]
+    corr_ours_ortho = P_ortho.toarray()
+    corr_ours_ortho = np.nonzero(corr_ours_ortho.T)[1]
+
     if exists_gt:
         # compute geodesic error of final resulta
 
@@ -90,9 +106,14 @@ if __name__ == "__main__":
         dist = distmatrix[corr_ours, groundtruth]
         errOurs, percOurs = utils.compute_percentageError(dist, maxdist=0.1, step=0.01)
 
+        # error of elastic ortho
+        dist = distmatrix[corr_ours_ortho, groundtruth]
+        errOursOrtho, percOursOrtho = utils.compute_percentageError(dist, maxdist=0.1, step=0.01)
+
         # error of LB approach
         dist = distmatrix[corr_LB, groundtruth]
         errZO, percZO = utils.compute_percentageError(dist, maxdist=0.1, step=0.01)
+
         fig, ax = plt.subplots()
         ax.get_xaxis().set_visible(True)
         ax.get_yaxis().set_visible(True)
@@ -103,8 +124,9 @@ if __name__ == "__main__":
         ax.set_xlim((0, 0.09))
         ax.set_ylim((0, 102))
 
-        ax.plot(errOurs, percOurs * 100, c='red', label='elasticBasis', linewidth=3)
-        ax.plot(errZO, percZO * 100, c='blue', label='LBBasis', linewidth=3)
+        ax.plot(errOurs, percOurs * 100, c='red', label=f'elasticBasis: {np.mean(percOurs)}', linewidth=3)
+        ax.plot(errOursOrtho, percOursOrtho * 100, c='orange', label=f'elasticBasisOrtho: {np.mean(percOursOrtho)}', linewidth=3)
+        ax.plot(errZO, percZO * 100, c='blue', label=f'LBBasis: {np.mean(percZO)}', linewidth=3)
 
         label_params = ax.get_legend_handles_labels()
         label_params[1].reverse()

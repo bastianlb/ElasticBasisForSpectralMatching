@@ -8,7 +8,7 @@ from tqdm import tqdm  # progress bar
 
 class CorrespondenceSolver():
     def __init__(self, shapeA, shapeB, kmin=10, kmax=200, bending_weight=1e-4,
-                 elasticBasis=False, LB=False, approx=False):
+                 elasticBasis=False, LB=False, approx=False, orthonormalBasis=False):
         """
         Class for computing a matching between shapeA and shapeB. Functional map C maps from B to A. Vertex Correspondence P maps from A to B. 
         See function computeCorrespondence
@@ -66,19 +66,19 @@ class CorrespondenceSolver():
         if self.elasticBasis:
             self.basisString = 'elastic basis'
 
-            if shapeA.elasticBasis is None:
-                shapeA.computeElasticBasis(k=kmax, bending_weight=bending_weight)
+            if shapeA.elasticBasis is None or orthonormalBasis:
+                shapeA.computeElasticBasis(k=kmax, bending_weight=bending_weight, orthonormal=orthonormalBasis)
             self.basisA = shapeA.elasticBasis
             if self.basisA.shape[1] < kmax:
                 print('Not enough precomputed basis vectors for kmax. Basis is recomputed')
-                shapeA.computeElasticBasis(k=kmax, bending_weight=bending_weight)
+                shapeA.computeElasticBasis(k=kmax, bending_weight=bending_weight, orthonormal=orthonormalBasis)
             self.basisA = shapeA.elasticBasis
-            if shapeB.elasticBasis is None:
-                shapeB.computeElasticBasis(k=kmax, bending_weight=bending_weight)
+            if shapeB.elasticBasis is None or orthonormalBasis:
+                shapeB.computeElasticBasis(k=kmax, bending_weight=bending_weight, orthonormal=orthonormalBasis)
             self.basisB = shapeB.elasticBasis
             if self.basisB.shape[1] < kmax:
                 print('Not enough precomputed basis vectors for kmax. Basis is recomputed')
-                shapeB.computeElasticBasis(k=kmax, bending_weight=bending_weight)
+                shapeB.computeElasticBasis(k=kmax, bending_weight=bending_weight, orthonormal=orthonormalBasis)
             self.basisB = shapeB.elasticBasis
 
         self.kmax = kmax
@@ -98,9 +98,11 @@ class CorrespondenceSolver():
         G = self.basisB[landmarksB, :self.kmin]
 
         if self.LBBasis:
+            print("Cinit using LB basis")
             # scalar product in subspace is euclidean
             sqrtA = np.identity(self.kmin)
         else:
+            print("Cinit using elastic basis")
             A = self.basisA[:, :self.kmin].T.dot(self.massA.dot(self.basisA[:, :self.kmin]))
             sqrtA = scipy.linalg.sqrtm(A)
 

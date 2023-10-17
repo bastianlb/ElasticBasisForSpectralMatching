@@ -31,7 +31,7 @@ def computeEVLaplace(v, f, k, nonzero=True):
     return vals, vecs
 
 
-def computeEV(v, f, k, bending_weight=1e-4, sigma=None, which=None, nonzero=True):
+def computeEV(v, f, k, bending_weight=1e-4, sigma=None, which=None, nonzero=True, orthonormal=False):
     """
     Compute eigenvectors of shell hessian 
         Args:
